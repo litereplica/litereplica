@@ -1,0 +1,8 @@
+gcc -DSQLITE_THREADSAFE=2 -DHAVE_USLEEP -DSQLITE_ENABLE_COLUMN_METADATA -DHAVE_READLINE=1 -c shell.c ../sqlite3.c ../../../binn/src/binn.c
+gcc shell.o sqlite3.o binn.o -o sqlite3 -L/usr/local/lib -lnanomsg -ldl -lreadline -lhistory
+
+# if your system does not have the readline use the commands bellow
+#gcc -DSQLITE_THREADSAFE=2 -DHAVE_USLEEP -DSQLITE_ENABLE_COLUMN_METADATA -c shell.c ../sqlite3.c ../../../binn/src/binn.c
+#gcc shell.o sqlite3.o binn.o -o sqlite3 -lnanomsg -ldl
+
+rm *.o

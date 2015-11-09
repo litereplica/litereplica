@@ -14,8 +14,7 @@ static void resolveLibs() {
   if (done) return;
 
   // try to get GetTickCount64 from the system
-  //kernel32 = GetModuleHandleW(L"kernel32");
-  kernel32 = GetModuleHandle("kernel32");
+  kernel32 = GetModuleHandleW(L"kernel32");
   if (!kernel32) return;
 
 #if defined(_WINCE)  //! TODO: check if this macro (_WINCE) is written correctly

@@ -2387,10 +2387,6 @@ static int process_sqliterc(
 static const char zOptions[] = 
   "   -help                show this message\n"
   "   -init filename       read/process named file\n"
-  "   -master              this is a master db\n"
-  "   -replica             this is a replica db\n"
-  "   -bind ADDRESS        listen for connections\n"
-  "   -connect ADDRESS     connect to address\n"
   "   -echo                print commands before execution\n"
   "   -[no]header          turn headers on or off\n"
   "   -bail                stop after hitting an error\n"
@@ -2404,6 +2400,11 @@ static const char zOptions[] =
   "   -separator 'x'       set output field separator (|)\n"
   "   -nullvalue 'text'    set text string for NULL values\n"
   "   -version             show SQLite version\n"
+  " replication:\n"
+  "   -primary             this is a primary db\n"
+  "   -replica             this is a replica db\n"
+  "   -bind ADDRESS        listen for connections\n"
+  "   -connect ADDRESS     connect to address\n"
 ;
 static void usage(int showDetail){
   fprintf(stderr,
@@ -2464,7 +2465,7 @@ int main(int argc, char **argv){
     }else if( strcmp(z,"-init")==0 ){
       i++;
       zInitFile = argv[i];
-    }else if( strcmp(z,"-master")==0 ){
+    }else if( strcmp(z,"-primary")==0 ){
       data.replica = REPLICA_MASTER;
     }else if( strcmp(z,"-replica")==0 ){
       data.replica = REPLICA_SLAVE;
@@ -2553,7 +2554,7 @@ int main(int argc, char **argv){
     }else if( strcmp(z,"-csv")==0 ){
       data.mode = MODE_Csv;
       memcpy(data.separator,",",2);
-    }else if( strcmp(z,"-master")==0 || strcmp(z,"-replica")==0 ){
+    }else if( strcmp(z,"-primary")==0 || strcmp(z,"-replica")==0 ){
     }else if( strcmp(z,"-connect")==0 || strcmp(z,"-bind")==0 ){
       i++;
     }else if( strcmp(z,"-separator")==0 ){

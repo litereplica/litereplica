@@ -5470,6 +5470,7 @@ SQLITE_API int sqlite3_mutex_notheld(sqlite3_mutex*);
 #define SQLITE_MUTEX_STATIC_PRNG      5  /* sqlite3_random() */
 #define SQLITE_MUTEX_STATIC_LRU       6  /* lru page list */
 #define SQLITE_MUTEX_STATIC_LRU2      7  /* lru page list */
+#define SQLITE_MUTEX_STATIC_PAGER     8  /* Pager List */
 
 /*
 ** CAPI3REF: Retrieve the mutex for a database connection
@@ -7736,6 +7737,9 @@ SQLITE_PRIVATE   void sqlite3PagerRefdump(Pager*);
 
 #endif /* _PAGER_H_ */
 
+
+/* Linked list of pager objects */
+static Pager * SQLITE_WSD PagerList = 0;
 
 #include "litereplica-int.h"
 
@@ -15323,6 +15327,7 @@ static sqlite3_mutex *os2MutexAlloc(int iType){
         { OS2_MUTEX_INITIALIZER, },
         { OS2_MUTEX_INITIALIZER, },
         { OS2_MUTEX_INITIALIZER, },
+        { OS2_MUTEX_INITIALIZER, },
       };
       if ( !isInit ){
         APIRET rc;
@@ -15608,6 +15613,7 @@ static int pthreadMutexEnd(void){ return SQLITE_OK; }
 */
 static sqlite3_mutex *pthreadMutexAlloc(int iType){
   static sqlite3_mutex staticMutexes[] = {
+    SQLITE3_MUTEX_INITIALIZER,
     SQLITE3_MUTEX_INITIALIZER,
     SQLITE3_MUTEX_INITIALIZER,
     SQLITE3_MUTEX_INITIALIZER,
@@ -15912,7 +15918,8 @@ static int winMutexNotheld(sqlite3_mutex *p){
 /*
 ** Initialize and deinitialize the mutex subsystem.
 */
-static sqlite3_mutex winMutex_staticMutexes[6] = {
+static sqlite3_mutex winMutex_staticMutexes[7] = {
+  SQLITE3_MUTEX_INITIALIZER,
   SQLITE3_MUTEX_INITIALIZER,
   SQLITE3_MUTEX_INITIALIZER,
   SQLITE3_MUTEX_INITIALIZER,
@@ -32484,6 +32491,7 @@ struct PagerSavepoint {
 **   sub-journals are only used for in-memory pager files.
 */
 struct Pager {
+  Pager *pNext;               /* Next Pager in the linked list */
   sqlite3_vfs *pVfs;          /* OS functions to use for IO */
   u8 exclusiveMode;           /* Boolean. True if locking_mode==EXCLUSIVE */
   u8 journalMode;             /* On of the PAGER_JOURNALMODE_* values */
@@ -34873,7 +34881,34 @@ SQLITE_PRIVATE void sqlite3PagerTruncateImage(Pager *pPager, Pgno nPage){
 ** to the caller.
 */
 SQLITE_PRIVATE int sqlite3PagerClose(Pager *pPager){
-  //disable_pager_replica(pPager);
+  Pager *lPager;
+#if SQLITE_THREADSAFE
+  sqlite3_mutex *mutexPager;
+
+  /* use a mutex to access the pager list */
+  mutexPager = sqlite3MutexAlloc(SQLITE_MUTEX_STATIC_PAGER);
+  sqlite3_mutex_enter(mutexPager);
+#endif
+  /* remove the pager from the list */
+  if (GLOBAL(Pager*,PagerList) == pPager)
+    GLOBAL(Pager*,PagerList) = pPager->pNext;
+  else {
+    for(lPager=GLOBAL(Pager*,PagerList); lPager; lPager=lPager->pNext){
+      if (lPager->pNext == pPager) {
+        lPager->pNext = pPager->pNext;
+        break;
+      }
+    }
+  }
+#if SQLITE_THREADSAFE
+  /* release the mutex */
+  assert( sqlite3_mutex_held(mutexPager) );
+  sqlite3_mutex_leave(mutexPager);
+#endif
+
+  /* disable any working replica on this pager */
+  disable_pager_replicas(pPager);
+
   disable_simulated_io_errors();
   sqlite3BeginBenignMalloc();
   pPager->errCode = 0;
@@ -35397,6 +35432,7 @@ SQLITE_PRIVATE int sqlite3PagerOpen(
   int noReadlock = (flags & PAGER_NO_READLOCK)!=0;  /* True to omit read-lock */
   int pcacheSize = sqlite3PcacheSize();       /* Bytes to allocate for PCache */
   u16 szPageDflt = SQLITE_DEFAULT_PAGE_SIZE;  /* Default page size */
+  sqlite3_mutex *mutexPager = 0;  /* Mutex used to access the PagerList */
 
   /* Figure out how much space is required for each journal file-handle
   ** (there are two of them, the main journal and the sub-journal). This
@@ -35621,6 +35657,20 @@ SQLITE_PRIVATE int sqlite3PagerOpen(
   /* pPager->pBusyHandlerArg = 0; */
   pPager->xReiniter = xReinit;
   /* memset(pPager->aHash, 0, sizeof(pPager->aHash)); */
+
+#if SQLITE_THREADSAFE
+  /* use a mutex to access the pager list */
+  mutexPager = sqlite3MutexAlloc(SQLITE_MUTEX_STATIC_PAGER);
+  sqlite3_mutex_enter(mutexPager);
+#endif
+  /* add the pager to the list */
+  pPager->pNext = GLOBAL(Pager*,PagerList);
+  GLOBAL(Pager*,PagerList) = pPager;
+#if SQLITE_THREADSAFE
+  /* release the mutex */
+  assert( sqlite3_mutex_held(mutexPager) );
+  sqlite3_mutex_leave(mutexPager);
+#endif
 
   *ppPager = pPager;
   return SQLITE_OK;
@@ -97227,7 +97277,6 @@ SQLITE_API int sqlite3_close(sqlite3 *db){
   if( !sqlite3SafetyCheckSickOrOk(db) ){
     return SQLITE_MISUSE_BKPT;
   }
-  sqlite3_disable_replicas(db, 0);
   sqlite3_mutex_enter(db->mutex);
 
   sqlite3ResetInternalSchema(db, 0);
@@ -114428,3 +114477,20 @@ void show_change_counter(sqlite3 *db) {
 }
 
 #endif
+
+/*****************************************************************************/
+
+void litereplica_join() {
+  Pager *pPager;
+  void *result;
+
+loc_check_threads:
+
+  for(pPager=GLOBAL(Pager*,PagerList); pPager; pPager=pPager->pNext){
+    if (pPager->thread_active == TRUE) {
+      sqlite3ThreadJoin(pPager->pThread, &result);
+      goto loc_check_threads;
+    }
+  }
+
+}

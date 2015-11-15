@@ -25,6 +25,7 @@
 int sqlite3_add_replica(sqlite3 *db, char *name, int replica, int connection, char *address);
 int sqlite3_disable_replicas(sqlite3 *db, char *name);
 int sqlite3_disable_replica(sqlite3 *db, char *address);
+void litereplica_join();
 
 
 /* replica status */

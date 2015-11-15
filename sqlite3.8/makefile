@@ -29,7 +29,7 @@ install:
 	cp $(SSHELL) /usr/bin
 
 clean:
-	rm -f *.o $(LIBRARY) $(SSHELL) tests
+	rm -f *.o $(LIBRARY) $(LIBNICK) $(SSHELL) tests
 
 tests: test.o seatest.o sqlite3dbg.o
 	gcc -g -lbinn -lnanomsg -ldl $^ -o $@

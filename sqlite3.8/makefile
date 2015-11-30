@@ -17,7 +17,7 @@ $(SHORT).o: $(SHORT).c litereplica.h litereplica-int.h
 	gcc -fPIC -DSQLITE_THREADSAFE=2 -DHAVE_USLEEP -DSQLITE_ENABLE_COLUMN_METADATA -c $<
 
 $(SSHELL): shell.o $(LIBRARY)
-	gcc -L. -lsqlite3 -ldl $< -o $@
+	gcc -L. -lsqlite3 -ldl -lbinn $< -o $@
 	strip $(SSHELL)
 
 shell.o: shell/shell.c

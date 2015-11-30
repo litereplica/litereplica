@@ -82,4 +82,15 @@ typedef struct replica_status replica_status;
 
 int sqlite3_replica_status(sqlite3 *db, char *name, replica_status *status);
 
+
+
+/*
+** declarations for the point-in-time recovery
+*/
+
+int sqlite3_list_recovery_points(sqlite3 *db, char *name, binn **plist);
+
+int sqlite3_restore_to_point(sqlite3 *db, char *name, char *datetime, int *pcount);
+
+
 #endif //_LITEREPLICA_H

@@ -46,6 +46,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+#include "../../../binn/src/binn.h"
 #include "../sqlite3.h"
 #if SQLITE_USER_AUTHENTICATION
 # include "sqlite3userauth.h"
@@ -96,7 +97,6 @@
 
 # define SHELL_USE_LOCAL_GETLINE 1
 #endif
-
 
 #if defined(_WIN32) || defined(WIN32)
 # include <io.h>
@@ -1786,6 +1786,7 @@ static char zHelp[] =
   ".backup ?DB? FILE      Backup DB (default \"main\") to FILE\n"
   ".bail on|off           Stop after hitting an error.  Default OFF\n"
   ".binary on|off         Turn binary output on or off.  Default OFF\n"
+  ".binlogs               List the binary logs\n"
   ".clone NEWDB           Clone data into NEWDB from the existing database\n"
   ".databases             List names and files of attached databases\n"
   ".dbinfo ?DB?           Show status information about the database\n"
@@ -1831,6 +1832,7 @@ static char zHelp[] =
   ".quit                  Exit this program\n"
   ".read FILENAME         Execute SQL in FILENAME\n"
   ".restore ?DB? FILE     Restore content of DB (default \"main\") from FILE\n"
+  ".restore_to DATE       Restore the database to a previous point in time\n"
   ".save FILE             Write in-memory database into FILE\n"
   ".scanstats on|off      Turn sqlite3_stmt_scanstatus() metrics on or off\n"
   ".schema ?TABLE?        Show the CREATE statements\n"
@@ -2731,6 +2733,20 @@ static int do_meta_command(char *zLine, ShellState *p){
     }
   }else
 
+  if( c=='b' && n>=4 && strncmp(azArg[0], "binlogs", n)==0 ){
+      binn *list;
+      rc = sqlite3_list_recovery_points(p->db, 0, &list);
+      if( rc==SQLITE_OK ){
+        int i, count = binn_count(list);
+        char *item;
+        for( i=0; i<=count; i++ ){
+          item = binn_list_str(list, i);
+          if (item) puts(item);
+        }
+        binn_free(list);
+      }
+  }else
+
   /* The undocumented ".breakpoint" command causes a call to the no-op
   ** routine named test_breakpoint().
   */
@@ -3459,7 +3475,25 @@ static int do_meta_command(char *zLine, ShellState *p){
     }
   }else
 
-  if( c=='r' && n>=3 && strncmp(azArg[0], "restore", n)==0 ){
+  if( c=='r' && n==10 && strncmp(azArg[0], "restore_to", n)==0 ){
+
+    if( nArg==2 ){
+      int count=0;
+      printf("restoring the database to the active state at %s\n", azArg[1]);
+      rc = sqlite3_restore_to_point(p->db, 0, azArg[1], &count);
+      printf("%d log file(s) were played back\n",count);
+      if( rc==SQLITE_OK )
+        puts("Success");
+      else
+        puts("then FAILED. Incomplete");
+    } else {
+      fprintf(stderr, "Usage: .restore_to 'DATE'\n");
+      rc = 1;
+    }
+
+  }else
+
+  if( c=='r' && n==7 && strncmp(azArg[0], "restore", n)==0 ){
     const char *zSrcFile;
     const char *zDb;
     sqlite3 *pSrc;

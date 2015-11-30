@@ -5,7 +5,9 @@ SQLite replication made easy
 
 The litereplica allows your applications to easily keep replicas of SQLite3 databases
 
-For a complete list of features, visit our site http://litereplica.io
+It also adds point-in-time recovery capability to SQLite
+
+For a complete list of features, visit http://litereplica.io
 
 
 Requirements

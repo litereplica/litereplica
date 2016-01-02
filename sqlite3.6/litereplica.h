@@ -71,7 +71,7 @@ struct replica_status {
   // status for the slave side
   char   address[256];
   int    conn_status;
-  uint64 db_state;
+  int    db_state;
   uint64 last_conn;    // (seconds) the last time a connection was made
   uint64 last_update;  // (seconds) the last time the db was updated
 };

@@ -5,23 +5,29 @@ SHORT   = sqlite3
 # the item below cannot be called SHELL because it's a reserved name
 SSHELL  = sqlite3
 
+LIBFLAGS = -DSQLITE_THREADSAFE=2 -DHAVE_USLEEP -DSQLITE_ENABLE_COLUMN_METADATA
+
 all: $(LIBRARY) $(SSHELL)
 
+debug: $(LIBRARY) $(SSHELL)
+
+debug: export LIBFLAGS := -g -DSQLITE_DEBUG=1 -DDEBUGPRINT $(LIBFLAGS)
+
 $(LIBRARY): $(SHORT).o
-	#gcc -shared -Wl,-soname,$(LIBNICK) -lbinn -lnanomsg $^ -o $@
-	gcc -shared -Wl,-soname,$(LIBRARY) -lbinn -lnanomsg $^ -o $@
+	#gcc -shared -Wl,-soname,$(LIBNICK) $^ -o $@ -lbinn -lnanomsg
+	gcc -shared -Wl,-soname,$(LIBRARY) $^ -o $@ -lbinn -lnanomsg
 	strip $(LIBRARY)
 	ln -sf $(LIBRARY) $(LIBNICK)
 
-$(SHORT).o: $(SHORT).c litereplica.h litereplica-int.h
-	gcc -fPIC -DSQLITE_THREADSAFE=2 -DHAVE_USLEEP -DSQLITE_ENABLE_COLUMN_METADATA -c $<
+$(SHORT).o: $(SHORT).c litereplica.h litereplica-int.h ../common/types.h ../common/elapsed_time.c ../common/checksum.c ../common/linked_list.c
+	gcc -fPIC $(LIBFLAGS) -c $<
 
 $(SSHELL): shell.o $(LIBRARY)
-	gcc -L. -lsqlite3 -ldl $< -o $@
+	gcc $< -o $@ -L. -lsqlite3 -ldl -lbinn -lreadline
 	strip $(SSHELL)
 
 shell.o: shell/shell.c
-	gcc -c $< -o $@
+	gcc -c -DHAVE_READLINE $< -o $@
 
 install:
 	cp $(LIBRARY) /usr/lib
@@ -32,7 +38,7 @@ clean:
 	rm -f *.o $(LIBRARY) $(LIBNICK) $(SSHELL) tests
 
 tests: test.o seatest.o sqlite3dbg.o
-	gcc -g -lbinn -lnanomsg -ldl $^ -o $@
+	gcc -g $^ -o $@ -lbinn -lnanomsg -ldl
 	cp tests test/tests
 	cd test && ./tests
 

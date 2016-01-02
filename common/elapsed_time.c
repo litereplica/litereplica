@@ -47,7 +47,7 @@ static int64 absoluteToMSecs(int64 cpuTime) {
   return absoluteToNSecs(cpuTime) / 1000000;
 }
 
-#elif defined(_POSIX_VERSION)
+#elif defined(__unix__)
 
 #include <unistd.h>    /* POSIX flags */
 #include <time.h>      /* clock_gettime(), time() */
@@ -140,16 +140,10 @@ uint64 now_fixed_time() {
 #else
 
   //return clock();
-  struct timeval tim;
+
   struct rusage ru;
   getrusage(RUSAGE_SELF, &ru);
-  /*
-  tim = ru.ru_utime;
-  t = tim.tv_sec;
-  tim = ru.ru_stime;
-  t += tim.tv_sec;
-  */
-  return ru.ru_utime.tv_sec + ru.ru_stime.tv_sec;
+  return ((ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) * 1000) + ((ru.ru_utime.tv_usec + ru.ru_stime.tv_usec) / 1000);
 
 #endif
 

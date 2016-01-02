@@ -1831,6 +1831,7 @@ static char zHelp[] =
   ".prompt MAIN CONTINUE  Replace the standard prompts\n"
   ".quit                  Exit this program\n"
   ".read FILENAME         Execute SQL in FILENAME\n"
+  ".replicas              Show the status of the current db replicas\n"
   ".restore ?DB? FILE     Restore content of DB (default \"main\") from FILE\n"
   ".restore_to DATE       Restore the database to a previous point in time\n"
   ".save FILE             Write in-memory database into FILE\n"
@@ -2612,6 +2613,7 @@ static int shell_dbinfo_command(ShellState *p, int nArg, char **azArg){
   return 0;
 }
 
+void show_replica_status(sqlite3 *db, char *name);
 
 /*
 ** If an input line begins with "." then invoke this routine to
@@ -3473,6 +3475,10 @@ static int do_meta_command(char *zLine, ShellState *p){
       rc = process_input(p, alt);
       fclose(alt);
     }
+  }else
+
+  if( c=='r' && n>=4 && strncmp(azArg[0], "replicas", n)==0 ){
+      show_replica_status(p->db, "main");
   }else
 
   if( c=='r' && n==10 && strncmp(azArg[0], "restore_to", n)==0 ){
@@ -4868,4 +4874,113 @@ int SQLITE_CDECL main(int argc, char **argv){
   }
   sqlite3_free(data.zFreeOnClose); 
   return rc;
+}
+
+char * get_connection_status(int state) {
+
+  switch(state){
+    case CONN_STATUS_DISCONNECTED:
+      return "disconnected";
+    case CONN_STATUS_STARTING:
+      return "starting";
+    case CONN_STATUS_UPDATING:
+      return "updating";
+    case CONN_STATUS_IN_SYNC:
+      return "in sync";
+    case CONN_STATUS_CONN_LOST:
+      return "connection lost";
+    case CONN_STATUS_INVALID_PEER:
+      return "invalid peer";
+    case CONN_STATUS_BUSY:
+      return "busy";
+    case CONN_STATUS_ERROR:
+      return "error";
+    default:
+      return "unknown";
+  }
+
+}
+
+char * get_db_status(int state) {
+
+  switch(state){
+  case DB_STATE_UPDATED:
+    return "updated";
+  case DB_STATE_OUTOFDATE:
+    return "out of date";
+  default:  /* case DB_STATE_UNKNOWN: */
+    return "unknown";
+  }
+
+}
+
+void print_elapsed_time(int64 last_time) {
+  uint64 secs, mins, hours;
+
+  last_time /= 1000;
+  secs = last_time % 60;
+  last_time /= 60;
+  mins = last_time % 60;
+  last_time /= 60;
+  hours = last_time;
+
+  if (hours > 0)
+    printf("%lld hours %lld mins %lld secs ago\n", hours, mins, secs);
+  else if (mins > 0)
+    printf("%lld mins %lld secs ago\n", mins, secs);
+  else if (secs > 0)
+    printf("%lld secs ago\n", secs);
+  else
+    puts("none");
+
+}
+
+void show_replica_status(sqlite3 *db, char *name) {
+  replica_status status={0};
+  int i;
+
+  if( sqlite3_replica_status(db, name, &status)!=SQLITE_OK ){
+    puts("could not retrieve the replica status");
+    return;
+  }
+
+  if( status.is_master ){
+    puts("role: master");
+    for (i=0; i < status.num_slaves; i++){
+      printf("slave %d:\n\taddress: %s\n", i+1, status.slaves[i].address);
+
+      printf("\tconnection status: %s\n", get_connection_status(status.slaves[i].conn_status));
+      printf("\tlast connection: ");
+      print_elapsed_time(status.slaves[i].last_conn);
+
+      printf("\tdatabase status: %s\n", get_db_status(status.slaves[i].db_state));
+      if (status.slaves[i].last_conn == 0) continue;
+      printf("\tlast db update: ");
+      print_elapsed_time(status.slaves[i].last_update);
+
+      if (status.slaves[i].db_state != DB_STATE_UPDATED) {
+        printf("\ttime out of date: ");
+        print_elapsed_time(status.slaves[i].time_out_of_date);
+      }
+    }
+  }
+
+  if( status.is_slave ){
+    if( status.is_master ) puts("");
+    puts("role: slave");
+    printf("\taddress: %s\n", status.address);
+
+    printf("\tconnection status: %s\n", get_connection_status(status.conn_status));
+    printf("\tlast connection: ");
+    print_elapsed_time(status.last_conn);
+
+    printf("\tdatabase status: %s\n", get_db_status(status.db_state));
+    printf("\tlast db update: ");
+    print_elapsed_time(status.last_update);
+  }
+
+  if( status.is_master==0 && status.is_slave==0 ){
+    puts("this db is not using replication");
+  }
+
 }

@@ -1831,7 +1831,7 @@ static char zHelp[] =
   ".prompt MAIN CONTINUE  Replace the standard prompts\n"
   ".quit                  Exit this program\n"
   ".read FILENAME         Execute SQL in FILENAME\n"
-  ".replicas              Show the status of the current db replicas\n"
+  ".replicas ?DB?         Show the status of DB (default \"main\") replicas\n"
   ".restore ?DB? FILE     Restore content of DB (default \"main\") from FILE\n"
   ".restore_to DATE       Restore the database to a previous point in time\n"
   ".save FILE             Write in-memory database into FILE\n"
@@ -3478,7 +3478,19 @@ static int do_meta_command(char *zLine, ShellState *p){
   }else
 
   if( c=='r' && n>=4 && strncmp(azArg[0], "replicas", n)==0 ){
-      show_replica_status(p->db, "main");
+    char *zDb;
+
+    if( nArg==1 ){
+      zDb = "main";
+    }else if( nArg==2 ){
+      zDb = azArg[1];
+    }else{
+      fprintf(stderr, "Usage: .replicas ?DB?\n");
+      rc = 1;
+      goto meta_command_exit;
+    }
+    show_replica_status(p->db, zDb);
+
   }else
 
   if( c=='r' && n==10 && strncmp(azArg[0], "restore_to", n)==0 ){

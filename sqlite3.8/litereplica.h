@@ -55,8 +55,9 @@ struct slave_status {
   int     conn_status;
   int     db_state;
   uint64  last_conn;         // (seconds) the last time a connection was made
+  uint64  last_conn_loss;    // (seconds) the last time the connection was lost
   uint64  last_update;       // (seconds) the last time the db was updated
-  uint64  time_out_of_date;  // (seconds) the first time an update was not processed. cleared when the db is updated. -- or use only the one above. if the replica is outOfDate it has the time since the last update not processed.
+  uint64  time_out_of_date;  // (seconds) the first time an update was not processed. cleared when the db is updated.
 };
 
 struct replica_status {
@@ -72,8 +73,9 @@ struct replica_status {
   char   address[256];
   int    conn_status;
   int    db_state;
-  uint64 last_conn;    // (seconds) the last time a connection was made
-  uint64 last_update;  // (seconds) the last time the db was updated
+  uint64 last_conn;      // (seconds) the last time a connection was made
+  uint64 last_conn_loss; // (seconds) the last time the connection was lost
+  uint64 last_update;    // (seconds) the last time the db was updated
 };
 
 typedef struct replica_status replica_status;

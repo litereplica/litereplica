@@ -5,6 +5,8 @@
 #define REPLICA_THREAD_EXIT            0xcd03  /*  */
 #define REPLICA_THREAD_OK              0xcd04  /*  */
 
+#define REPLICA_RESPONSE     0xdb02    /*  */
+
 //#define DBLOG_PGNO         0xdb33    /*  */
 //#define DBLOG_OFFSET       0xdb34    /*  */
 //#define DBLOG_DATA         0xdb35    /*  */
@@ -24,6 +26,7 @@
 #define REPLICA_CONN_DOWN    0xdb56    /*  */
 #define REPLICA_PING_REQ     0xdb57    /*  */
 #define REPLICA_PING_RESP    0xdb58    /*  */
+#define REPLICA_CLOSING      0xdb59    /*  */
 
 #define REPLICA_NUMPAGES     0xdb61    /*  */
 #define REPLICA_PAGESIZE     0xdb62    /*  */
@@ -77,17 +80,19 @@ struct replica {
   //int   dblog_open;    /* If a transaction is open while in sync - used in the slave peer */
   int   master_locked;   /* If this replica locked the database */
   int   locked_timer;
-  int   noop_timer;
+  int   idle_timer;
   sqlite3 *workerdb;
   Pager   *pPager;
   /* used for the query status */
-  int   db_state;
-  uint64  last_conn;       /* (monotonic time) the last time a connection was made */
-  uint64  last_update;     /* (monotonic time) the last time the db was updated */
-  uint64  last_conn_lost;  /* (monotonic time) the first time an update was not processed. cleared when the db is updated */
+  int     db_state;
+  uint64  last_conn;        /* (monotonic time) the last time a connection was made */
+  uint64  last_conn_loss;   /* (monotonic time) the last time the connection was lost */
+  uint64  last_update;      /* (monotonic time) the last time the db was updated */
+  uint64  time_out_of_date; /* (monotonic time) the first time an update was not processed. cleared when the db is updated */
 };
 
 
 SQLITE_PRIVATE int  some_slave_in_sync(Pager *pPager);
 SQLITE_PRIVATE void send_dblog_to_slaves(Pager *pPager, binn *list);
+SQLITE_PRIVATE void update_replicas_db_state(Pager *pPager);
 SQLITE_PRIVATE int  disable_pager_replicas(Pager *pPager);

@@ -4962,16 +4962,18 @@ void show_replica_status(sqlite3 *db, char *name) {
       printf("slave %d:\n\taddress: %s\n", i+1, status.slaves[i].address);
 
       printf("\tconnection status: %s\n", get_connection_status(status.slaves[i].conn_status));
-      printf("\tlast connection: ");
+      printf("\t  last connection: ");
       print_elapsed_time(status.slaves[i].last_conn);
+      printf("\t  last connection loss: ");
+      print_elapsed_time(status.slaves[i].last_conn_loss);
 
-      printf("\tdatabase status: %s\n", get_db_status(status.slaves[i].db_state));
+      printf("\tdatabase state: %s\n", get_db_status(status.slaves[i].db_state));
       if (status.slaves[i].last_conn == 0) continue;
-      printf("\tlast db update: ");
+      printf("\t  last db update: ");
       print_elapsed_time(status.slaves[i].last_update);
 
       if (status.slaves[i].db_state != DB_STATE_UPDATED) {
-        printf("\ttime out of date: ");
+        printf("\t  time out of date: ");
         print_elapsed_time(status.slaves[i].time_out_of_date);
       }
     }
@@ -4983,11 +4985,13 @@ void show_replica_status(sqlite3 *db, char *name) {
     printf("\taddress: %s\n", status.address);
 
     printf("\tconnection status: %s\n", get_connection_status(status.conn_status));
-    printf("\tlast connection: ");
+    printf("\t  last connection: ");
     print_elapsed_time(status.last_conn);
+    printf("\t  last connection loss: ");
+    print_elapsed_time(status.last_conn_loss);
 
-    printf("\tdatabase status: %s\n", get_db_status(status.db_state));
-    printf("\tlast db update: ");
+    printf("\tdatabase state: %s\n", get_db_status(status.db_state));
+    printf("\t  last db update: ");
     print_elapsed_time(status.last_update);
   }
 

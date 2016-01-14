@@ -77,7 +77,7 @@ bool isMonotonic() {
 #endif
 
 
-uint64 now_fixed_time() {
+SQLITE_PRIVATE uint64 now_fixed_time() {
 
 #if defined(_WIN32)
   static unsigned int highdword = 0;
@@ -151,7 +151,7 @@ uint64 now_fixed_time() {
 
 /*************************************************************************************/
 
-uint64 calc_expiration_time(int timeout) {   // timeout in milliseconds
+SQLITE_PRIVATE uint64 calc_expiration_time(int timeout) {   // timeout in milliseconds
   uint64 expiration_time;
 
   expiration_time = now_fixed_time() + timeout;
@@ -163,7 +163,7 @@ uint64 calc_expiration_time(int timeout) {   // timeout in milliseconds
 
 /*************************************************************************************/
 
-uint64 elapsed_time_from(uint64 from_time) {   // in milliseconds
+SQLITE_PRIVATE uint64 elapsed_time_from(uint64 from_time) {   // in milliseconds
 
   if (from_time == 0) return 0;
 

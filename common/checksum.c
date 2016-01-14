@@ -3,10 +3,14 @@
 // crc32
 /***************************************************************************/
 
+// ATENTION: these functions must be static otherwise a segmentation fault occurs
+//           with the node-gyp compilation, probably calling a function with the
+//           same name from another file
+
 unsigned int   crc_table[256];
 BOOL           crc_table_initialized = FALSE;
 
-void crc32_init() {
+static void crc32_init() {
   unsigned int crc;
   int x, y;
 
@@ -27,7 +31,7 @@ void crc32_init() {
 
 }
 
-unsigned int crc32(char *bufptr, int buflen) {
+static unsigned int crc32(char *bufptr, int buflen) {
   unsigned int  crc;
   unsigned char c;
   int   i;
@@ -47,7 +51,7 @@ unsigned int crc32(char *bufptr, int buflen) {
   return crc;
 }
 
-unsigned int crc32rev(char *bufptr, int buflen) {
+static unsigned int crc32rev(char *bufptr, int buflen) {
   unsigned int  crc;
   unsigned char c;
   int   i;

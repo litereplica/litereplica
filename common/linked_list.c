@@ -9,7 +9,7 @@ struct llitem_struct {
     llitem_t *next;
 };
 
-void llist_add(void *pfirst, void *pto_add) {
+SQLITE_PRIVATE void llist_add(void *pfirst, void *pto_add) {
   llitem_t **first, *to_add, *item;
 
   first = (llitem_t **) pfirst;
@@ -27,7 +27,7 @@ void llist_add(void *pfirst, void *pto_add) {
 
 }
 
-void llist_prepend(void *pfirst, void *pto_add) {
+SQLITE_PRIVATE void llist_prepend(void *pfirst, void *pto_add) {
   llitem_t **first, *to_add, *item;
 
   first = (llitem_t **) pfirst;
@@ -39,7 +39,7 @@ void llist_prepend(void *pfirst, void *pto_add) {
 
 }
 
-void llist_remove(void *pfirst, void *pto_del) {
+SQLITE_PRIVATE void llist_remove(void *pfirst, void *pto_del) {
   llitem_t **first, *to_del, *item;
 
   first = (llitem_t **) pfirst;

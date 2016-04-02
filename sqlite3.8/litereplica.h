@@ -7,7 +7,6 @@
 */
 
 #include <binn.h>
-#include "../common/types.h"
 
 /* replica mode */
 

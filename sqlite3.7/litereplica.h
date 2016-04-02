@@ -6,7 +6,7 @@
 ** declarations for the litereplica
 */
 
-#include "../common/types.h"
+#include <binn.h>
 
 /* replica mode */
 

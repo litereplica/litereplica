@@ -19,7 +19,7 @@ $(LIBRARY): $(SHORT).o
 	strip $(LIBRARY)
 	ln -sf $(LIBRARY) $(LIBNICK)
 
-$(SHORT).o: $(SHORT).c litereplica.h litereplica-int.h ../common/types.h ../common/elapsed_time.c ../common/checksum.c ../common/linked_list.c
+$(SHORT).o: $(SHORT).c litereplica.h litereplica-int.h ../common/elapsed_time.c ../common/checksum.c ../common/linked_list.c
 	gcc -fPIC $(LIBFLAGS) -c $<
 
 $(SSHELL): shell.o $(LIBRARY)

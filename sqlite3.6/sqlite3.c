@@ -6571,7 +6571,6 @@ SQLITE_PRIVATE void sqlite3HashClear(Hash*);
 
 #include <nanomsg/nn.h>
 #include <nanomsg/pair.h>
-#include <binn.h>
 #include "litereplica.h"
 
 /*

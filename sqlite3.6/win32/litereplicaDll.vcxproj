@@ -58,6 +58,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>kernel32.lib;nanomsg.lib;binn-1.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>sqlite3.def</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -77,6 +78,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>kernel32.lib;nanomsg.lib;binn-1.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>sqlite3.def</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -87,6 +89,9 @@
   <ItemGroup>
     <ClCompile Include="dllmain.c" />
     <ClCompile Include="..\sqlite3.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="sqlite3.def" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

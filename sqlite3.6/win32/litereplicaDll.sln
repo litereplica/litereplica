@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual C++ Express 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "litereplicaDll", "litereplicaDll.vcxproj", "{A08CA1B1-B23F-4803-B02A-B09E0D8B6C58}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A08CA1B1-B23F-4803-B02A-B09E0D8B6C58}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A08CA1B1-B23F-4803-B02A-B09E0D8B6C58}.Debug|Win32.Build.0 = Debug|Win32
+		{A08CA1B1-B23F-4803-B02A-B09E0D8B6C58}.Release|Win32.ActiveCfg = Release|Win32
+		{A08CA1B1-B23F-4803-B02A-B09E0D8B6C58}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

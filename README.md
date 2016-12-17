@@ -27,12 +27,12 @@ Them same apply for the `binn` and the `nanomsg` libraries
 Linking to the shared library
 -----------------------------
 
-##### On Linux:
+#### On Linux:
 ```
 gcc -lsqlite3 myapp.c
 ```
 
-##### On Windows:
+#### On Windows:
 
 Include the `sqlite3.lib` in your MSVC project
 
@@ -40,7 +40,7 @@ Include the `sqlite3.lib` in your MSVC project
 Compiling the Library
 ---------------------
 
-##### On Linux:
+#### On Linux:
 
 ```
 git clone https://github.com/litereplica/litereplica
@@ -51,11 +51,19 @@ make install
 It will create the `libsqlite3.so.1` library and the `sqlite3` shell application
 
 
-##### On Windows:
+#### On Windows:
 
 Use the included Visual Studio project in the win32 folder
 
 It will create the library `sqlite3-1.0.dll` but you can rename it to `litereplica-1.0.dll`
+
+
+Limitations
+-----------
+
+This public version has some bugs that limit the usage for database sizes up to ~50MB
+
+The production ready version is available only under the commercial license
 
 
 Licencing
@@ -63,11 +71,11 @@ Licencing
 
 If your application includes or links to the litereplica code you will need a license.
 
-The litereplica code is released under one of these 2 licenses:
+The litereplica code (this version) is released under one of these 2 licenses:
 
  * GNU Affero GPL v3
  * Commercial License
 
-Use the first option if your applications are released under a license compatible with the GNU Affero GPL v3. This means also releasing the source code.
+Use the first option if your applications are released under a license compatible with the GNU Affero GPL v3. This means also releasing the source code of your application.
 
-Otherwise you can purchase a commercial license at http://litereplica.io
+Otherwise you must purchase a commercial license at http://litereplica.io

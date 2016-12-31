@@ -19,9 +19,15 @@ The litereplica depends on the [binn](https://github.com/liteserver/binn) and th
 How to use
 ----------
 
+### C and C++
+
 You can include the `sqlite3.c` file in your applications or leave it as a separate shared library
 
-Them same apply for the `binn` and the `nanomsg` libraries
+The same apply for the `binn` library
+
+### Other languages
+
+Check for wrappers in the [download](http://litereplica.io/download.html) page
 
 
 Linking to the shared library

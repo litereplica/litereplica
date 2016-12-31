@@ -5,9 +5,9 @@ SHORT   = sqlite3
 # the item below cannot be called SHELL because it's a reserved name
 SSHELL  = sqlite3
 
-LIBFLAGS = -DSQLITE_THREADSAFE=1 -DHAVE_USLEEP -DSQLITE_ENABLE_COLUMN_METADATA
+LIBFLAGS = -DSQLITE_USE_URI=1 -DSQLITE_THREADSAFE=1 -DHAVE_USLEEP -DSQLITE_ENABLE_COLUMN_METADATA
 
-all: $(LIBRARY) $(SSHELL)
+all:   $(LIBRARY) $(SSHELL)
 
 debug: $(LIBRARY) $(SSHELL)
 
@@ -49,7 +49,7 @@ seatest.o: ../common/seatest.c
 	gcc -c $< -o $@
 
 sqlite3dbg.o: sqlite3.c
-	gcc -g -DSQLITE_DEBUG=1 -DDEBUGPRINT -DSQLITE_THREADSAFE=1 -DHAVE_USLEEP -DSQLITE_ENABLE_COLUMN_METADATA -c $< -o $@
+	gcc -g -DSQLITE_DEBUG=1 -DDEBUGPRINT -DSQLITE_USE_URI=1 -DSQLITE_THREADSAFE=1 -DHAVE_USLEEP -DSQLITE_ENABLE_COLUMN_METADATA -c $< -o $@
 
 # variables:
 #   $@  output

@@ -1,6 +1,23 @@
 language: c
 
 script:
+  # compile Binn
+  - git clone https://github.com/liteserver/binn
+  - cd binn
+  - make
+  - sudo make install
+  - cd ..
+  # compile nanomsg
+  - git clone https://github.com/nanomsg/nanomsg
+  - cd nanomsg
+  - mkdir build
+  - cd build
+  - cmake ..
+  - cmake --build .
+  - sudo cmake --build . --target install
+  - sudo ldconfig
+  - cd ../..
+  # compile litereplica
   - cd sqlite3.8
   - make
   - sudo make install

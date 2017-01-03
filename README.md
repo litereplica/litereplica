@@ -1,5 +1,6 @@
 litereplica
 ===========
+[![Build Status](https://travis-ci.org/litereplica/litereplica.svg?branch=master)](https://travis-ci.org/litereplica/litereplica)
 
 SQLite replication made easy
 

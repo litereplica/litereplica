@@ -1,0 +1,6 @@
+language: c
+
+script:
+  - cd sqlite3.8
+  - make
+  - sudo make install

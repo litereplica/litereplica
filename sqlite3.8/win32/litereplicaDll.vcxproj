@@ -82,8 +82,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\litereplica-int.h" />
-    <ClInclude Include="..\litereplica.h" />
     <ClInclude Include="..\sqlite3.h" />
   </ItemGroup>
   <ItemGroup>

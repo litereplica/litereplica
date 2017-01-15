@@ -47,7 +47,6 @@
 #include <stdio.h>
 #include <assert.h>
 #include "../sqlite3.h"
-#include "../litereplica.h"
 #if SQLITE_USER_AUTHENTICATION
 # include "sqlite3userauth.h"
 #endif

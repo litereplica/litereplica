@@ -6571,7 +6571,90 @@ SQLITE_PRIVATE void sqlite3HashClear(Hash*);
 
 #include <nanomsg/nn.h>
 #include <nanomsg/pair.h>
-#include "litereplica.h"
+#ifndef LITEREPLICA_H
+#define LITEREPLICA_H
+
+/*
+** declarations for the litereplica
+*/
+
+#include <binn.h>
+
+/* replica mode */
+
+#define REPLICA_NONE     0    /*  */
+#define REPLICA_MASTER   1    /*  */
+#define REPLICA_SLAVE    2    /*  */
+
+/* socket action */
+
+#define REPLICA_BIND     1    /*  */
+#define REPLICA_LISTEN   1    /* this can be removed. there is no listening on ipc, I guess */
+#define REPLICA_CONNECT  2    /*  */
+
+/* exported functions */
+
+int sqlite3_add_replica(sqlite3 *db, char *name, int replica, int connection, char *address);
+int sqlite3_disable_replicas(sqlite3 *db, char *name);
+int sqlite3_disable_replica(sqlite3 *db, char *address);
+void litereplica_join();
+
+
+/* replica status */
+
+/* conn_status */
+
+#define CONN_STATUS_DISCONNECTED  0
+#define CONN_STATUS_STARTING      1
+#define CONN_STATUS_UPDATING      2
+#define CONN_STATUS_IN_SYNC       3
+#define CONN_STATUS_CONN_LOST     4
+#define CONN_STATUS_INVALID_PEER  5
+#define CONN_STATUS_BUSY          6
+#define CONN_STATUS_ERROR         7
+
+/* db_state */
+#define DB_STATE_UPDATED          2
+#define DB_STATE_OUTOFDATE        1
+#define DB_STATE_UNKNOWN          0
+
+/* structs */
+
+#define MAX_SLAVES   8
+
+struct slave_status {
+  char    address[256];      // it can be a path, so it must be large :/
+  int     conn_status;
+  int     db_state;
+  uint64  last_conn;         // (seconds) the last time a connection was made
+  uint64  last_update;       // (seconds) the last time the db was updated
+  uint64  time_out_of_date;  // (seconds) the first time an update was not processed. cleared when the db is updated. -- or use only the one above. if the replica is outOfDate it has the time since the last update not processed.
+};
+
+struct replica_status {
+  int is_master;
+  int is_slave;
+  //
+  // status for the master side
+  int num_slaves;
+  //struct slave_status *slaves;          // this one requires a sqlite3_free() to be called on this item
+  struct slave_status slaves[MAX_SLAVES]; // this one has a limit of items
+  //
+  // status for the slave side
+  char   address[256];
+  int    conn_status;
+  int    db_state;
+  uint64 last_conn;    // (seconds) the last time a connection was made
+  uint64 last_update;  // (seconds) the last time the db was updated
+};
+
+typedef struct replica_status replica_status;
+
+/* exported functions */
+
+int sqlite3_replica_status(sqlite3 *db, char *name, replica_status *status);
+
+#endif /* LITEREPLICA_H */
 
 /*
 ** If compiling for a processor that lacks floating point support,
@@ -7740,7 +7823,99 @@ SQLITE_PRIVATE   void sqlite3PagerRefdump(Pager*);
 /* Linked list of pager objects */
 static Pager * SQLITE_WSD PagerList = 0;
 
-#include "litereplica-int.h"
+
+// worker thread commands
+#define REPLICA_THREAD_ADD_REPLICA     0xcd01  /*  */
+#define REPLICA_THREAD_REMOVE_REPLICA  0xcd02  /*  */
+#define REPLICA_THREAD_EXIT            0xcd03  /*  */
+#define REPLICA_THREAD_OK              0xcd04  /*  */
+
+//#define DBLOG_PGNO         0xdb33    /*  */
+//#define DBLOG_OFFSET       0xdb34    /*  */
+//#define DBLOG_DATA         0xdb35    /*  */
+#define REPLICA_COMMIT       0xdb33    /*  */
+#define REPLICA_ROLLBACK     0xdb34    /*  */
+#define REPLICA_SAVEPOINT    0xdb35    /*  */
+#define REPLICA_RELEASE      0xdb36    /*  */
+#define REPLICA_ROLLBACK_TO  0xdb37    /*  */
+//#define REPLICA_COMMAND      0xdb38    /*  */
+
+#define REPLICA_GET_HASHES   0xdb51    /*  */
+#define REPLICA_GET_PAGE     0xdb52    /*  */
+#define REPLICA_GET_DB       0xdb53    /*  */
+#define REPLICA_SYNC_OK      0xdb54    /*  */
+
+#define REPLICA_STARTING     0xdb55    /*  */
+#define REPLICA_CONN_DOWN    0xdb56    /*  */
+#define REPLICA_PING_REQ     0xdb57    /*  */
+#define REPLICA_PING_RESP    0xdb58    /*  */
+
+#define REPLICA_NUMPAGES     0xdb61    /*  */
+#define REPLICA_PAGESIZE     0xdb62    /*  */
+#define REPLICA_CHECKSUM1    0xdb63    /*  */
+#define REPLICA_CHECKSUM2    0xdb64    /*  */
+#define REPLICA_PAGE         0xdb65    /*  */
+
+// response codes
+#define REPLICA_INVALID      0xdb90    /*  */
+#define REPLICA_OK           0xdb91    /*  */
+#define REPLICA_IN_SYNC      0xdb92    /*  */
+
+// error codes
+#define REPLICA_NO_RESPONSE  0xdb93
+#define REPLICA_INVALID_PEER 0xdb94
+#define REPLICA_BUSY         0xdb95
+#define REPLICA_ERROR        0xdb96
+
+
+// the state of the slave peer or connection
+#define STATE_CONN_NONE       0         /*  */
+#define STATE_IDENTIFIED      1         /*  */
+#define STATE_UPDATING        2         /*  */
+#define STATE_IN_SYNC         3         /*  */
+#define STATE_CONN_LOST       4         /*  */
+#define STATE_INVALID_PEER    5         /*  */
+#define STATE_BUSY            6         /*  */
+#define STATE_ERROR           7         /*  */
+
+/*
+#define STATE_CONN_NONE     CONN_STATUS_DISCONNECTED
+#define STATE_IDENTIFIED    CONN_STATUS_STARTING
+#define STATE_UPDATING      CONN_STATUS_UPDATING
+#define STATE_IN_SYNC       CONN_STATUS_IN_SYNC
+#define STATE_CONN_LOST     CONN_STATUS_CONN_LOST
+#define STATE_INVALID_PEER  CONN_STATUS_INVALID_PEER
+#define STATE_BUSY          CONN_STATUS_BUSY
+#define STATE_ERROR         CONN_STATUS_ERROR
+*/
+
+typedef struct replica replica;
+
+struct replica {
+  replica *next;         /* Next item in the list */
+  int   mode;            /* replica mode [master|slave] */
+  int   active;          /* This connection is being used. 0=new connection 1=active -1=disabled */
+  int   conn;            /* Replica server connection mode [connect|listen] */
+  char *address;         /* Address to bind or connect */
+  int   sock;            /* Socket used to connect with the other peer */
+  int   state;           /* The state of this connection/peer */
+  //int   dblog_open;    /* If a transaction is open while in sync - used in the slave peer */
+  int   master_locked;   /* If this replica locked the database */
+  int   locked_timer;
+  int   noop_timer;
+  sqlite3 *workerdb;
+  Pager   *pPager;
+  /* used for the query status */
+  int   db_state;
+  uint64  last_conn;       /* (monotonic time) the last time a connection was made */
+  uint64  last_update;     /* (monotonic time) the last time the db was updated */
+  uint64  last_conn_lost;  /* (monotonic time) the first time an update was not processed. cleared when the db is updated */
+};
+
+
+SQLITE_PRIVATE int  some_slave_in_sync(Pager *pPager);
+SQLITE_PRIVATE void send_dblog_to_slaves(Pager *pPager, binn *list);
+SQLITE_PRIVATE int  disable_pager_replicas(Pager *pPager);
 
 
 /************** End of pager.h ***********************************************/
@@ -112896,9 +113071,309 @@ int sqlite3ThreadJoin(SQLiteThread *p, void **ppOut){
 /************** End of threads.c ********************************************/
 /****************************************************************************/
 
-#include "../common/linked_list.c"
-#include "../common/checksum.c"
-#include "../common/elapsed_time.c"
+/*
+** simple linked list
+**
+** usage:
+** llist_add(&first, item);
+** llist_prepend(&first, item);
+** llist_remove(&first, item);
+*/
+
+typedef struct llitem_struct llitem_t;
+struct llitem_struct {
+    llitem_t *next;
+};
+
+SQLITE_PRIVATE void llist_add(void *pfirst, void *pto_add) {
+  llitem_t **first, *to_add, *item;
+
+  first = (llitem_t **) pfirst;
+  to_add = (llitem_t *) pto_add;
+
+  item = *first;
+  if (item == 0) {
+    *first = to_add;
+  } else {
+    while (item->next != 0) {
+      item = item->next;
+    }
+    item->next = to_add;
+  }
+
+}
+
+SQLITE_PRIVATE void llist_prepend(void *pfirst, void *pto_add) {
+  llitem_t **first, *to_add, *item;
+
+  first = (llitem_t **) pfirst;
+  to_add = (llitem_t *) pto_add;
+
+  item = *first;
+  *first = to_add;
+  to_add->next = item;
+
+}
+
+SQLITE_PRIVATE void llist_remove(void *pfirst, void *pto_del) {
+  llitem_t **first, *to_del, *item;
+
+  first = (llitem_t **) pfirst;
+  to_del = (llitem_t *) pto_del;
+
+  item = *first;
+  if (to_del == item) {
+    *first = to_del->next;
+  } else {
+    while (item != 0) {
+      if (item->next == to_del) {
+        item->next = to_del->next;
+        return;
+      }
+      item = item->next;
+    }
+  }
+
+}
+
+/***************************************************************************/
+/* CRC32 CHECKSUM                                                          */
+/***************************************************************************/
+
+// ATENTION: these functions must be static otherwise a segmentation fault occurs
+//           with the node-gyp compilation, probably calling a function with the
+//           same name from another file
+
+unsigned int   crc_table[256];
+BOOL           crc_table_initialized = FALSE;
+
+static void crc32_init() {
+  unsigned int crc;
+  int x, y;
+
+  if (crc_table_initialized == TRUE) return;
+
+  for (x = 0; x < 256; x++) {
+      crc = x;
+      for (y = 8; y > 0; y--) {
+         if (crc & 1)
+            crc = (crc >> 1) ^ 0xEDB88320;
+         else
+            crc >>= 1;
+      }
+      crc_table[x] = crc;
+  }
+
+  crc_table_initialized = TRUE;
+
+}
+
+static unsigned int crc32(char *bufptr, int buflen) {
+  unsigned int  crc;
+  unsigned char c;
+  int   i;
+
+  if ((bufptr == 0) || (buflen <= 0)) return 0;
+  crc32_init();
+
+  crc = 0xFFFFFFFF;
+
+  for(i=0; i < buflen; i++){
+    c = bufptr[i];
+    crc = ((crc >> 8) & 0x00FFFFFF) ^ crc_table[(crc ^ c) & 0xFF];
+  }
+
+  crc^=0xFFFFFFFF;
+
+  return crc;
+}
+
+static unsigned int crc32rev(char *bufptr, int buflen) {
+  unsigned int  crc;
+  unsigned char c;
+  int   i;
+
+  if ((bufptr == 0) || (buflen <= 0)) return 0;
+  crc32_init();
+
+  crc = 0xFFFFFFFF;
+
+  for(i = buflen - 1; i >= 0; i--){
+    c = bufptr[i];
+    crc = ((crc >> 8) & 0x00FFFFFF) ^ crc_table[(crc ^ c) & 0xFF];
+  }
+
+  crc^=0xFFFFFFFF;
+
+  return crc;
+}
+
+/*****************************************************************************/
+/* ELAPSED TIME                                                              */
+/*****************************************************************************/
+
+#ifdef _WIN32
+
+#include <windows.h>
+typedef ULONGLONG (WINAPI *PtrGetTickCount64)(void);
+static PtrGetTickCount64 ptrGetTickCount64 = 0;
+
+static void resolveLibs() {
+  static BOOL done = FALSE;
+  HMODULE kernel32;
+
+  if (done) return;
+
+  // try to get GetTickCount64 from the system
+  kernel32 = GetModuleHandleW(L"kernel32");
+  if (!kernel32) return;
+
+#if defined(_WINCE)  //! TODO: check if this macro (_WINCE) is written correctly
+  // does this function exist on WinCE, or will it ever exist?
+  ptrGetTickCount64 = (PtrGetTickCount64)GetProcAddress(kernel32, L"GetTickCount64");
+#else
+  ptrGetTickCount64 = (PtrGetTickCount64)GetProcAddress(kernel32, "GetTickCount64");
+#endif
+
+  done = TRUE;
+}
+
+#elif defined(__MACH__) && defined(__APPLE__)
+
+#include <sys/time.h>
+#include <unistd.h>
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+
+static mach_timebase_info_data_t info = {0,0};
+
+static int64 absoluteToNSecs(int64 cpuTime)
+{
+  if (info.denom == 0) mach_timebase_info(&info);
+  int64 nsecs = cpuTime * info.numer / info.denom;
+  return nsecs;
+}
+
+static int64 absoluteToMSecs(int64 cpuTime) {
+  return absoluteToNSecs(cpuTime) / 1000000;
+}
+
+#elif defined(__unix__)
+
+#include <unistd.h>    /* POSIX flags */
+#include <time.h>      /* clock_gettime(), time() */
+#include <sys/time.h>  /* gethrtime(), gettimeofday() */
+
+/*
+bool isMonotonic() {
+#if (_POSIX_MONOTONIC_CLOCK-0 > 0)
+  return true;
+#else
+  static int returnValue = 0;
+
+  if (returnValue == 0) {
+#  if (_POSIX_MONOTONIC_CLOCK-0 < 0) || !defined(_SC_MONOTONIC_CLOCK)
+    returnValue = -1;
+#  elif (_POSIX_MONOTONIC_CLOCK == 0)
+    // detect if the system support monotonic timers
+    long x = sysconf(_SC_MONOTONIC_CLOCK);
+    returnValue = (x >= 200112L) ? 1 : -1;
+#  endif
+  }
+
+  return returnValue != -1;
+#endif
+} */
+
+#endif
+
+/*****************************************************************************/
+
+SQLITE_PRIVATE uint64 now_fixed_time() {
+
+#if defined(_WIN32)
+  static unsigned int highdword = 0;
+  static unsigned int lastval = 0;
+  unsigned int val;
+
+  resolveLibs();
+
+  if (ptrGetTickCount64)
+    return ptrGetTickCount64();
+
+  val = GetTickCount();
+  if (val < lastval) highdword++;
+  lastval = val;
+  return ((uint64)highdword << 32) | val;
+
+#elif (defined(__hpux) || defined(hpux)) || ((defined(__sun__) || defined(__sun) || defined(sun)) && (defined(__SVR4) || defined(__svr4__)))
+  /* HP-UX, Solaris. ------------------------------------------ */
+  return gethrtime() / 1000000;
+
+#elif defined(__MACH__) && defined(__APPLE__)
+  /* OSX. ----------------------------------------------------- */
+  uint64 cpu_time = mach_absolute_time();
+  return absoluteToMSecs(cpu_time);
+
+#elif defined(_POSIX_VERSION)
+  /* POSIX. --------------------------------------------------- */
+#if defined(_POSIX_TIMERS) && (_POSIX_TIMERS > 0)
+  {
+    struct timespec ts;
+#if defined(CLOCK_MONOTONIC_RAW)
+    /* Linux. ------------------------------------------- */
+    const clockid_t id = CLOCK_MONOTONIC_RAW;
+#elif defined(CLOCK_MONOTONIC)
+    /* AIX, BSD, Linux, POSIX, Solaris. ----------------- */
+    const clockid_t id = CLOCK_MONOTONIC;
+#elif defined(CLOCK_MONOTONIC_PRECISE)
+    /* BSD. --------------------------------------------- */
+    const clockid_t id = CLOCK_MONOTONIC_PRECISE;
+#elif defined(CLOCK_HIGHRES)
+    /* Solaris. ----------------------------------------- */
+    const clockid_t id = CLOCK_HIGHRES;
+#elif defined(CLOCK_REALTIME)
+    /* AIX, BSD, HP-UX, Linux, POSIX. ------------------- */
+    const clockid_t id = CLOCK_REALTIME;
+#else
+    const clockid_t id = (clockid_t)-1;  /* Unknown. */
+#endif /* CLOCK_* */
+    if ( id != (clockid_t)-1 && clock_gettime( id, &ts ) != -1 )
+      return (ts.tv_sec * 1000) + (ts.tv_nsec / 1000000);
+    /* Fall thru. */
+  }
+#endif /* _POSIX_TIMERS */
+
+  /* AIX, BSD, Cygwin, HP-UX, Linux, OSX, POSIX, Solaris. ----- */
+  struct timeval tm;
+  gettimeofday( &tm, NULL );
+  return (tm.tv_sec * 1000) + (tm.tv_usec / 1000);
+
+#else
+
+  //return clock();
+
+  struct rusage ru;
+  getrusage(RUSAGE_SELF, &ru);
+  return ((ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) * 1000) + ((ru.ru_utime.tv_usec + ru.ru_stime.tv_usec) / 1000);
+
+#endif
+
+}
+
+/*****************************************************************************/
+
+SQLITE_PRIVATE uint64 calc_expiration_time(int timeout) {   // timeout in milliseconds
+  uint64 expiration_time = now_fixed_time() + timeout;
+  return expiration_time;
+}
+
+/*****************************************************************************/
+
+SQLITE_PRIVATE uint64 elapsed_time_from(uint64 from_time) {   // in milliseconds
+  if (from_time == 0) return 0;
+  return now_fixed_time() - from_time;
+}
 
 /****************************************************************************/
 

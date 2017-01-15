@@ -7,19 +7,18 @@ SSHELL  = sqlite3
 
 LIBFLAGS = -DSQLITE_THREADSAFE=1 -DHAVE_USLEEP -DSQLITE_ENABLE_COLUMN_METADATA
 
-all: $(LIBRARY) $(SSHELL)
+all:   $(LIBRARY) $(SSHELL)
 
 debug: $(LIBRARY) $(SSHELL)
 
 debug: export LIBFLAGS := -g -DSQLITE_DEBUG=1 -DDEBUGPRINT $(LIBFLAGS)
 
 $(LIBRARY): $(SHORT).o
-	#gcc -shared -Wl,-soname,$(LIBNICK) $^ -o $@ -lbinn -lnanomsg
 	gcc -shared -Wl,-soname,$(LIBRARY) $^ -o $@ -lbinn -lnanomsg
 	strip $(LIBRARY)
 	ln -sf $(LIBRARY) $(LIBNICK)
 
-$(SHORT).o: $(SHORT).c litereplica.h litereplica-int.h ../common/elapsed_time.c ../common/checksum.c ../common/linked_list.c
+$(SHORT).o: $(SHORT).c $(SHORT).h
 	gcc -fPIC $(LIBFLAGS) -c $<
 
 $(SSHELL): shell.o $(LIBRARY)
@@ -32,6 +31,7 @@ shell.o: shell/shell.c
 install:
 	cp $(LIBRARY) /usr/lib
 	cd /usr/lib && ln -sf $(LIBRARY) $(LIBNICK)
+	cp $(SHORT).h /usr/include
 	cp $(SSHELL) /usr/bin
 
 clean:

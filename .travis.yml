@@ -14,7 +14,7 @@ script:
   - cd build
   - cmake ..
   - cmake --build .
-  - sudo cmake --build . --target install
+  - sudo -E cmake --build . --target install
   - sudo ldconfig
   - cd ../..
   # compile litereplica
